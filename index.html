@@ -1,0 +1,1221 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>World Flavour Grocery</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap"
+    rel="stylesheet" />
+  <!-- SheetJS for Excel data/text -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <!-- JSZip for extracting embedded images from .xlsx (which is a ZIP) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+  <style>
+    /* ── Reset & Base ─────────────────────────────────────────────── */
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg: #f7f4ee;
+      --bg2: #efeae0;
+      --card: #fffdf8;
+      --ink: #1c1a14;
+      --ink-soft: #5a5445;
+      --accent: #d4611a;
+      --accent2: #2d6a4f;
+      --gold: #c9993a;
+      --radius: 20px;
+      --shadow: 0 8px 32px rgba(28, 26, 20, .09);
+      --shadow-lg: 0 20px 60px rgba(28, 26, 20, .15);
+      --transition: .45s cubic-bezier(.4, 0, .2, 1);
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── Noise texture overlay ─────────────────────────────────────── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── Hero / Header ─────────────────────────────────────────────── */
+    .hero {
+      position: relative;
+      overflow: hidden;
+      padding: 0;
+      background: var(--ink);
+      min-height: 520px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .hero-gradient {
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 60% at 60% 40%, rgba(212, 97, 26, .35) 0%, transparent 65%),
+        radial-gradient(ellipse 60% 80% at 20% 70%, rgba(45, 106, 79, .3) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 40% at 80% 80%, rgba(201, 153, 58, .2) 0%, transparent 55%);
+      animation: gradientDrift 12s ease-in-out infinite alternate;
+    }
+
+    @keyframes gradientDrift {
+      0% {
+        opacity: 1;
+        transform: scale(1) translateX(0);
+      }
+
+      100% {
+        opacity: .85;
+        transform: scale(1.04) translateX(2%);
+      }
+    }
+
+    /* Floating spice dots */
+    .hero-dots {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      overflow: hidden;
+    }
+
+    .dot {
+      position: absolute;
+      border-radius: 50%;
+      opacity: 0;
+      animation: floatDot var(--dur, 8s) var(--delay, 0s) ease-in-out infinite;
+    }
+
+    @keyframes floatDot {
+      0% {
+        opacity: 0;
+        transform: translateY(0) scale(1);
+      }
+
+      15% {
+        opacity: .55;
+      }
+
+      85% {
+        opacity: .3;
+      }
+
+      100% {
+        opacity: 0;
+        transform: translateY(-60px) scale(.6);
+      }
+    }
+
+    .hero-content {
+      position: relative;
+      z-index: 2;
+      text-align: center;
+      padding: 80px 24px 60px;
+    }
+
+    .hero-badge {
+      display: inline-block;
+      background: rgba(212, 97, 26, .18);
+      border: 1px solid rgba(212, 97, 26, .4);
+      color: #f4a85a;
+      font-size: .75rem;
+      font-weight: 600;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      padding: 6px 18px;
+      border-radius: 100px;
+      margin-bottom: 24px;
+      opacity: 0;
+      animation: fadeSlideUp .6s .2s ease forwards;
+    }
+
+    .hero-title {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(2.8rem, 7vw, 5.2rem);
+      font-weight: 700;
+      line-height: 1.08;
+      color: #faf7f0;
+      opacity: 0;
+      animation: fadeSlideUp .7s .35s ease forwards;
+    }
+
+    .hero-title span {
+      display: block;
+      background: linear-gradient(135deg, #f4a85a 0%, #e8c56a 50%, #c9993a 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero-sub {
+      margin-top: 18px;
+      font-size: clamp(1rem, 2.5vw, 1.25rem);
+      font-weight: 300;
+      color: rgba(250, 247, 240, .65);
+      letter-spacing: .06em;
+      opacity: 0;
+      animation: fadeSlideUp .7s .5s ease forwards;
+    }
+
+    .hero-divider {
+      width: 60px;
+      height: 3px;
+      background: linear-gradient(90deg, var(--accent), var(--gold));
+      border-radius: 2px;
+      margin: 28px auto 0;
+      opacity: 0;
+      animation: fadeSlideUp .6s .65s ease forwards;
+    }
+
+    .hero-info {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      flex-wrap: wrap;
+      padding: 0 24px 56px;
+      opacity: 0;
+      animation: fadeSlideUp .6s .75s ease forwards;
+    }
+
+    .hero-pill {
+      background: rgba(255, 255, 255, .07);
+      border: 1px solid rgba(255, 255, 255, .14);
+      backdrop-filter: blur(12px);
+      color: rgba(250, 247, 240, .8);
+      font-size: .85rem;
+      font-weight: 500;
+      padding: 10px 22px;
+      border-radius: 100px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: background var(--transition), border-color var(--transition);
+    }
+
+    .hero-pill:hover {
+      background: rgba(255, 255, 255, .13);
+      border-color: rgba(212, 97, 26, .5);
+    }
+
+    .hero-pill svg {
+      flex-shrink: 0;
+    }
+
+    /* wave separator */
+    .hero-wave {
+      position: relative;
+      z-index: 2;
+      width: 100%;
+      overflow: hidden;
+      line-height: 0;
+      margin-top: -2px;
+    }
+
+    .hero-wave svg {
+      display: block;
+      width: 100%;
+      height: 60px;
+    }
+
+    /* ── Section ───────────────────────────────────────────────────── */
+    .section-wrap {
+      position: relative;
+      z-index: 1;
+      max-width: 1340px;
+      margin: 0 auto;
+      padding: 64px 24px 100px;
+    }
+
+    .section-header {
+      text-align: center;
+      margin-bottom: 56px;
+      opacity: 0;
+      animation: fadeSlideUp .7s .9s ease forwards;
+    }
+
+    .section-kicker {
+      font-size: .75rem;
+      font-weight: 600;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 10px;
+    }
+
+    .section-title {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(1.9rem, 4vw, 2.8rem);
+      font-weight: 600;
+      color: var(--ink);
+      line-height: 1.2;
+    }
+
+    .section-desc {
+      margin-top: 12px;
+      color: var(--ink-soft);
+      font-size: 1rem;
+      max-width: 500px;
+      margin-left: auto;
+      margin-right: auto;
+      line-height: 1.65;
+    }
+
+    /* ── File path indicator ─────────────────────────────────────────── */
+    .file-indicator {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      background: var(--card);
+      border: 1px solid rgba(212, 97, 26, .2);
+      border-radius: var(--radius);
+      padding: 16px 24px;
+      margin-bottom: 40px;
+      box-shadow: var(--shadow);
+      flex-wrap: wrap;
+    }
+
+    .file-indicator-left {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      min-width: 0;
+    }
+
+    .file-indicator-icon {
+      width: 44px;
+      height: 44px;
+      background: linear-gradient(135deg, rgba(212, 97, 26, .12), rgba(201, 153, 58, .12));
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .file-indicator-label {
+      font-size: .72rem;
+      font-weight: 600;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 3px;
+    }
+
+    .file-indicator-path {
+      font-size: .88rem;
+      font-weight: 500;
+      color: var(--ink);
+      font-family: 'DM Mono', 'Courier New', monospace;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 420px;
+    }
+
+    .reload-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--accent);
+      color: white;
+      font-size: .82rem;
+      font-weight: 600;
+      padding: 10px 22px;
+      border-radius: 100px;
+      border: none;
+      cursor: pointer;
+      transition: all .3s ease;
+      box-shadow: 0 4px 14px rgba(212, 97, 26, .3);
+      flex-shrink: 0;
+    }
+
+    .reload-btn:hover {
+      background: #bf5516;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(212, 97, 26, .42);
+    }
+
+    .reload-btn.spinning svg {
+      animation: spin .7s linear infinite;
+    }
+
+    /* ── Loading ───────────────────────────────────────────────────── */
+    .loading-state {
+      display: none;
+      text-align: center;
+      padding: 60px 0;
+    }
+
+    .loading-state.active {
+      display: block;
+    }
+
+    .loader-ring {
+      width: 56px;
+      height: 56px;
+      border: 3px solid rgba(212, 97, 26, .15);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin .9s linear infinite;
+      margin: 0 auto 20px;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .loading-text {
+      color: var(--ink-soft);
+      font-size: .95rem;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        opacity: .7
+      }
+
+      50% {
+        opacity: 1
+      }
+    }
+
+    /* ── Product grid ──────────────────────────────────────────────── */
+    .product-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 18px;
+    }
+
+    /* ── Product card ──────────────────────────────────────────────── */
+    .product-card {
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      opacity: 0;
+      transform: translateY(32px);
+      transition:
+        transform .55s cubic-bezier(.22, 1, .36, 1),
+        box-shadow .4s ease,
+        opacity .55s ease;
+      position: relative;
+      cursor: default;
+      border: 1px solid rgba(28, 26, 20, .06);
+    }
+
+    .product-card.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .product-card:hover {
+      transform: translateY(-8px) scale(1.01);
+      box-shadow: var(--shadow-lg);
+      border-color: rgba(212, 97, 26, .18);
+    }
+
+    .product-card::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: var(--radius);
+      background: linear-gradient(135deg, rgba(212, 97, 26, .05) 0%, transparent 60%);
+      opacity: 0;
+      transition: opacity var(--transition);
+      pointer-events: none;
+    }
+
+    .product-card:hover::after {
+      opacity: 1;
+    }
+
+    /* Image container with edge fade */
+    .product-img-wrap {
+      position: relative;
+      aspect-ratio: 16/9;
+      overflow: hidden;
+      background: linear-gradient(145deg, var(--bg2), #e8e2d5);
+    }
+
+    .product-img-wrap::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      /* Soft gradient fade on all edges */
+      -webkit-mask-image:
+        radial-gradient(ellipse 88% 88% at 50% 50%,
+          black 60%,
+          transparent 100%);
+      mask-image:
+        radial-gradient(ellipse 88% 88% at 50% 50%,
+          black 60%,
+          transparent 100%);
+      background: transparent;
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    .product-img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      object-position: center;
+      padding: 12px;
+      transition: transform .55s cubic-bezier(.22, 1, .36, 1);
+      display: block;
+      position: relative;
+      z-index: 1;
+    }
+
+    .product-card:hover .product-img {
+      transform: scale(1.07);
+    }
+
+    /* Bottom shimmer bar on image */
+    .product-img-wrap::before {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 55%;
+      background: linear-gradient(to top, rgba(28, 26, 20, .12), transparent);
+      z-index: 3;
+      pointer-events: none;
+    }
+
+    /* Placeholder when no image */
+    .product-img-placeholder {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      color: var(--ink-soft);
+      font-size: .8rem;
+      font-weight: 500;
+      opacity: .6;
+    }
+
+    .product-img-placeholder svg {
+      opacity: .4;
+    }
+
+    .product-body {
+      padding: 12px 16px 14px;
+    }
+
+    .product-tag {
+      display: inline-block;
+      background: rgba(212, 97, 26, .1);
+      color: var(--accent);
+      font-size: .68rem;
+      font-weight: 600;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      padding: 3px 10px;
+      border-radius: 100px;
+      margin-bottom: 6px;
+    }
+
+    .product-name {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: var(--ink);
+      line-height: 1.35;
+      margin-bottom: 0;
+      min-height: 2.7em;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .product-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-top: 1px solid rgba(28, 26, 20, .07);
+      padding-top: 14px;
+      margin-top: 2px;
+    }
+
+    .product-price {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--accent2);
+      letter-spacing: -.01em;
+    }
+
+    .product-cta {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--ink);
+      color: white;
+      font-size: .78rem;
+      font-weight: 600;
+      letter-spacing: .05em;
+      text-transform: uppercase;
+      padding: 8px 16px;
+      border-radius: 100px;
+      border: none;
+      cursor: pointer;
+      transition: all .3s ease;
+    }
+
+    .product-cta:hover {
+      background: var(--accent);
+      transform: scale(1.04);
+    }
+
+    /* ── Empty / error state ──────────────────────────────────────── */
+    .empty-state {
+      display: none;
+      text-align: center;
+      padding: 80px 24px;
+      color: var(--ink-soft);
+    }
+
+    .empty-state.active {
+      display: block;
+    }
+
+    .empty-icon {
+      font-size: 3.5rem;
+      margin-bottom: 16px;
+      opacity: .5;
+    }
+
+    /* ── Contact / footer strip ─────────────────────────────────────  */
+    .contact-strip {
+      background: var(--ink);
+      color: rgba(250, 247, 240, .85);
+      text-align: center;
+      padding: 56px 24px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .contact-strip::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse 70% 70% at 50% 100%, rgba(212, 97, 26, .2), transparent);
+      pointer-events: none;
+    }
+
+    .contact-title {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(1.5rem, 3.5vw, 2.2rem);
+      font-weight: 600;
+      color: #faf7f0;
+      margin-bottom: 8px;
+      position: relative;
+    }
+
+    .contact-sub {
+      font-size: .95rem;
+      font-weight: 300;
+      opacity: .65;
+      margin-bottom: 36px;
+      position: relative;
+    }
+
+    .contact-btns {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      flex-wrap: wrap;
+      position: relative;
+    }
+
+    .contact-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 14px 32px;
+      border-radius: 100px;
+      font-size: .92rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all .35s ease;
+      border: 2px solid transparent;
+    }
+
+    .contact-btn-primary {
+      background: var(--accent);
+      color: white;
+      box-shadow: 0 8px 24px rgba(212, 97, 26, .4);
+    }
+
+    .contact-btn-primary:hover {
+      background: #e0701f;
+      transform: translateY(-3px);
+      box-shadow: 0 12px 32px rgba(212, 97, 26, .55);
+    }
+
+    .contact-btn-outline {
+      border-color: rgba(250, 247, 240, .2);
+      color: rgba(250, 247, 240, .8);
+    }
+
+    .contact-btn-outline:hover {
+      border-color: rgba(250, 247, 240, .6);
+      color: #faf7f0;
+      transform: translateY(-3px);
+    }
+
+    .footer-copy {
+      margin-top: 40px;
+      font-size: .78rem;
+      opacity: .35;
+      position: relative;
+      letter-spacing: .06em;
+    }
+
+    /* ── Animations ─────────────────────────────────────────────────  */
+    @keyframes fadeSlideUp {
+      from {
+        opacity: 0;
+        transform: translateY(24px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* ── Responsive ─────────────────────────────────────────────────  */
+    @media (max-width: 640px) {
+      .product-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 16px;
+      }
+
+      .section-wrap {
+        padding: 48px 16px 80px;
+      }
+
+      .hero-content {
+        padding: 64px 16px 44px;
+      }
+    }
+
+    @media (max-width: 380px) {
+      .product-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* ── Stagger delays ─────────────────────────────────────────────  */
+    .product-card:nth-child(1) {
+      transition-delay: .05s
+    }
+
+    .product-card:nth-child(2) {
+      transition-delay: .10s
+    }
+
+    .product-card:nth-child(3) {
+      transition-delay: .15s
+    }
+
+    .product-card:nth-child(4) {
+      transition-delay: .20s
+    }
+
+    .product-card:nth-child(5) {
+      transition-delay: .25s
+    }
+
+    .product-card:nth-child(6) {
+      transition-delay: .30s
+    }
+
+    .product-card:nth-child(7) {
+      transition-delay: .35s
+    }
+
+    .product-card:nth-child(8) {
+      transition-delay: .40s
+    }
+
+    .product-card:nth-child(9) {
+      transition-delay: .45s
+    }
+
+    .product-card:nth-child(10) {
+      transition-delay: .50s
+    }
+
+    .product-card:nth-child(11) {
+      transition-delay: .55s
+    }
+
+    .product-card:nth-child(12) {
+      transition-delay: .60s
+    }
+
+    /* ── Scroll-reveal utility ──────────────────────────────────────  */
+    .reveal {
+      opacity: 0;
+      transform: translateY(30px);
+      transition: opacity .6s ease, transform .6s cubic-bezier(.22, 1, .36, 1);
+    }
+
+    .reveal.in-view {
+      opacity: 1;
+      transform: none;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- ══════════════════════════════ HERO ══════════════════════════════ -->
+  <header class="hero">
+    <div class="hero-gradient"></div>
+
+    <!-- Animated floating dots -->
+    <div class="hero-dots" id="heroDots"></div>
+
+    <div class="hero-content">
+      <div class="hero-badge">✦ Fresh Stock ✦</div>
+      <h1 class="hero-title">
+        World Flavour
+        <span>Grocery</span>
+      </h1>
+      <p class="hero-sub">Asian &amp; African Groceries — Authentic. Fresh. Affordable.</p>
+      <p class="hero-sub">Open 7 days a week from 10am to 7pm.</p>
+      <p class="hero-sub">Fresh Meat Available.</p>
+      <div class="hero-divider"></div>
+    </div>
+
+    <div class="hero-info">
+      <a href="tel:+447379690571" class="hero-pill">
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path
+            d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+        </svg>
+        Call to Order
+      </a>
+      <a href="#contact" class="hero-pill">
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+          <path d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+        Visit In Store
+      </a>
+      <div class="hero-pill">
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path
+            d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+        </svg>
+        100+ Products
+      </div>
+    </div>
+
+    <div class="hero-wave">
+      <svg viewBox="0 0 1440 60" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M0,30 C240,60 480,0 720,30 C960,60 1200,0 1440,30 L1440,60 L0,60 Z" fill="#f7f4ee" />
+      </svg>
+    </div>
+  </header>
+
+  <!-- ══════════════════════════════ MAIN ══════════════════════════════ -->
+  <main class="section-wrap">
+
+    <!-- Section header -->
+    <div class="section-header">
+      <p class="section-kicker">Our Products</p>
+      <h2 class="section-title">Discover Authentic Flavours</h2>
+      <p class="section-desc">Explore our wide range of &amp; African groceries.</p>
+    </div>
+
+    <!-- products.xlsx is auto-loaded silently -->
+
+    <!-- Loading -->
+    <div class="loading-state" id="loadingState">
+      <div class="loader-ring"></div>
+      <p class="loading-text" id="loadingText">Reading your Excel file…</p>
+    </div>
+
+    <!-- Empty / error state -->
+    <div class="empty-state" id="emptyState">
+      <div class="empty-icon">🌿</div>
+      <p style="font-size:1.05rem;font-weight:600;color:var(--ink);margin-bottom:8px;">No products found</p>
+      <p style="font-size:.9rem;">Make sure your Excel has data in columns B and C starting from row 2</p>
+    </div>
+
+    <!-- Product grid -->
+    <div class="product-grid" id="productGrid"></div>
+
+  </main>
+
+  <!-- ══════════════════════════════ FOOTER ════════════════════════════ -->
+  <section class="contact-strip" id="contact">
+    <h2 class="contact-title">Come Visit Us.</h2>
+    <p class="contact-sub">Fresh deliveries. Friendly staff. Authentic quality.</p>
+    <p
+      style="position:relative; font-size:.95rem; color:rgba(250,247,240,.75); margin-bottom:28px; display:flex; align-items:center; justify-content:center; gap:8px;">
+      <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"
+        style="flex-shrink:0">
+        <path d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+        <path d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+      </svg>
+      27 E Main St, Broxburn EH52 5AB
+    </p>
+    <div class="contact-btns">
+      <a href="tel:+447379690571" class="contact-btn contact-btn-primary">
+        <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path
+            d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+        </svg>
+        Call Us
+      </a>
+      <a href="https://maps.google.com/?q=27+E+Main+St,+Broxburn+EH52+5AB" target="_blank"
+        class="contact-btn contact-btn-outline">
+        <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+          <path d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+        Get Directions
+      </a>
+    </div>
+    <p class="footer-copy">© 2026 World Flavour Grocery &nbsp;·&nbsp; All Rights Reserved </p>
+    <p class="footer-copy">✦ Created By Pluto ✦</p>
+  </section>
+
+  <!-- ══════════════════════════════ SCRIPT ════════════════════════════== -->
+  <script>
+    /* ─── Floating hero dots ─────────────────────────────────────────── */
+    (function () {
+      const wrap = document.getElementById('heroDots');
+      const palette = ['#d4611a', '#c9993a', '#2d6a4f', '#e8c56a', '#a05a2c', '#6a9b8a'];
+      for (let i = 0; i < 22; i++) {
+        const d = document.createElement('div');
+        d.className = 'dot';
+        const sz = 4 + Math.random() * 10;
+        d.style.cssText = `
+      width:${sz}px; height:${sz}px;
+      left:${Math.random() * 100}%;
+      top:${20 + Math.random() * 70}%;
+      background:${palette[Math.floor(Math.random() * palette.length)]};
+      --dur:${6 + Math.random() * 8}s;
+      --delay:${Math.random() * 6}s;
+    `;
+        wrap.appendChild(d);
+      }
+    })();
+
+    /* ─── Scroll-reveal observer ─────────────────────────────────────── */
+    const revealObs = new IntersectionObserver((entries) => {
+      entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in-view'); revealObs.unobserve(e.target); } });
+    }, { threshold: 0.12 });
+    document.querySelectorAll('.reveal').forEach(el => revealObs.observe(el));
+
+    /* ─── Card appear observer ───────────────────────────────────────── */
+    const cardObs = new IntersectionObserver((entries) => {
+      entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); cardObs.unobserve(e.target); } });
+    }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+
+    /* ─── Auto-load products.xlsx silently ──────────────────────────── */
+    (async function () {
+      try {
+        const res = await fetch('products.xlsx?t=' + Date.now());
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const buf = await res.arrayBuffer();
+        await processFile({ arrayBuffer: () => Promise.resolve(buf), name: 'products.xlsx' });
+      } catch (e) {
+        console.warn('Auto-load failed:', e);
+        showEmpty('Could not load product data. Please check the server is running.');
+      }
+    })();
+
+    /* ─── Main processing function ───────────────────────────────────── */
+    async function processFile(file) {
+      setLoading(true, 'Reading Excel file…');
+
+      try {
+        const arrayBuffer = await file.arrayBuffer();
+
+        // 1. Parse sheet data (text) via SheetJS
+        setLoading(true, 'Parsing product data…');
+        const wb = XLSX.read(arrayBuffer, { type: 'array' });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+
+        if (!rows || rows.length < 2) {
+          showEmpty(); return;
+        }
+
+        // 2. Extract embedded images via JSZip (xlsx = zip)
+        setLoading(true, 'Extracting images…');
+        const imageMap = await extractImages(arrayBuffer, ws);
+
+        // 3. Build products array (skip header row)
+        const products = [];
+        for (let i = 1; i < rows.length; i++) {
+          const row = rows[i];
+          const name = String(row[1] || '').trim();
+          const price = String(row[2] || '').trim();
+          if (!name && !price) continue;
+          products.push({ name, price, imgSrc: imageMap[i] || null });
+        }
+
+        if (!products.length) { showEmpty(); return; }
+
+        setLoading(false);
+        renderProducts(products);
+
+      } catch (err) {
+        console.error('Error processing file:', err);
+        setLoading(false);
+        showEmpty('Could not load products.xlsx. Make sure the file is in the same folder as index.html and you are running via a local server (not file://).');
+      }
+    }
+
+    /* ─── Image extraction using JSZip ──────────────────────────────── */
+    async function extractImages(arrayBuffer, ws) {
+      const imageMap = {}; // rowIndex → dataURL
+
+      try {
+        const zip = await JSZip.loadAsync(arrayBuffer);
+
+        // ── Step A: Gather all media files ──────────────────────────── */
+        const mediaFiles = {};
+        const mediaFolder = zip.folder('xl/media');
+        if (mediaFolder) {
+          const mediaPromises = [];
+          zip.folder('xl/media').forEach((relPath, file) => {
+            const ext = relPath.split('.').pop().toLowerCase();
+            const mimeMap = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', bmp: 'image/bmp', webp: 'image/webp', tiff: 'image/tiff', emf: 'image/x-emf', wmf: 'image/x-wmf' };
+            const mime = mimeMap[ext] || 'image/png';
+            mediaPromises.push(
+              file.async('base64').then(b64 => {
+                mediaFiles[relPath] = `data:${mime};base64,${b64}`;
+              })
+            );
+          });
+          await Promise.all(mediaPromises);
+        }
+
+        const mediaKeys = Object.keys(mediaFiles);
+        if (!mediaKeys.length) return imageMap;
+
+        // ── Step B: Parse drawing XML to get row ↔ image mapping ────── */
+        // drawings reference the sheet via _rels
+        // Try to find drawing1.xml
+        let drawingXml = null;
+        let drawingRelsXml = null;
+
+        // Find sheet drawing relationship
+        const sheetRelsFiles = ['xl/worksheets/_rels/sheet1.xml.rels'];
+        for (const relsPath of sheetRelsFiles) {
+          const relsFile = zip.file(relsPath);
+          if (relsFile) {
+            const relsText = await relsFile.async('text');
+            const drawingMatch = relsText.match(/Target="[./]*drawings\/([^"]+)"/);
+            if (drawingMatch) {
+              const drawingPath = 'xl/drawings/' + drawingMatch[1];
+              const drawingFile = zip.file(drawingPath);
+              if (drawingFile) {
+                drawingXml = await drawingFile.async('text');
+                // Get drawing rels
+                const drawingRelsPath = 'xl/drawings/_rels/' + drawingMatch[1] + '.rels';
+                const drawingRelsFile = zip.file(drawingRelsPath);
+                if (drawingRelsFile) {
+                  drawingRelsXml = await drawingRelsFile.async('text');
+                }
+              }
+            }
+            break;
+          }
+        }
+
+        if (!drawingXml) {
+          // Fallback: try to directly find xl/drawings/drawing1.xml
+          const df = zip.file('xl/drawings/drawing1.xml');
+          if (df) {
+            drawingXml = await df.async('text');
+            const drf = zip.file('xl/drawings/_rels/drawing1.xml.rels');
+            if (drf) drawingRelsXml = await drf.async('text');
+          }
+        }
+
+        if (!drawingXml || !drawingRelsXml) {
+          // Last resort: map by order — image1 → row1, image2 → row2 etc.
+          mediaKeys.sort().forEach((key, idx) => {
+            imageMap[idx + 1] = mediaFiles[key];
+          });
+          return imageMap;
+        }
+
+        // ── Step C: Parse relationship IDs (rId → media filename) ──── */
+        const rIdToMedia = {};
+        const relsParser = new DOMParser();
+        const relsDoc = relsParser.parseFromString(drawingRelsXml, 'text/xml');
+        relsDoc.querySelectorAll('Relationship').forEach(rel => {
+          const id = rel.getAttribute('Id');
+          const target = rel.getAttribute('Target'); // e.g. ../media/image1.png
+          const filename = target.split('/').pop(); // image1.png
+          rIdToMedia[id] = filename;
+        });
+
+        // ── Step D: Parse drawing XML – match anchors to rows ──────── */
+        const xmlParser = new DOMParser();
+        const drawDoc = xmlParser.parseFromString(drawingXml, 'text/xml');
+
+        // Two anchor types: xdr:oneCellAnchor and xdr:twoCellAnchor
+        const anchors = [
+          ...Array.from(drawDoc.querySelectorAll('oneCellAnchor')),
+          ...Array.from(drawDoc.querySelectorAll('twoCellAnchor')),
+        ];
+
+        anchors.forEach(anchor => {
+          // Get the "from" cell row (0-indexed in XML)
+          const fromEl = anchor.querySelector('from');
+          if (!fromEl) return;
+          const rowEl = fromEl.querySelector('row');
+          if (!rowEl) return;
+          const xmlRow = parseInt(rowEl.textContent, 10); // 0-indexed
+
+          // Get rId from the blip fill
+          const blip = anchor.querySelector('blip');
+          if (!blip) return;
+          const rId = blip.getAttribute('r:embed') || blip.getAttribute('embed') ||
+            blip.getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships', 'embed');
+          if (!rId) return;
+
+          const mediaFilename = rIdToMedia[rId];
+          if (!mediaFilename) return;
+
+          // Find the dataURL — match filename in mediaFiles keys
+          const fullKey = Object.keys(mediaFiles).find(k => k.endsWith(mediaFilename));
+          if (fullKey) {
+            // xmlRow 0 = header, xmlRow 1 = first data row (index 1)
+            imageMap[xmlRow] = mediaFiles[fullKey];
+          }
+        });
+
+        // If parsing returned empty map, fall back to sequential order
+        if (!Object.keys(imageMap).length) {
+          mediaKeys.sort().forEach((key, idx) => {
+            imageMap[idx + 1] = mediaFiles[key];
+          });
+        }
+
+      } catch (err) {
+        console.warn('Image extraction warning:', err);
+      }
+
+      return imageMap;
+    }
+
+    /* ─── Render products ────────────────────────────────────────────── */
+    function renderProducts(products) {
+      const grid = document.getElementById('productGrid');
+      grid.innerHTML = '';
+
+      const categories = ['Pantry', 'Fresh', 'Spice', 'Staple', 'Specialty', 'Organic'];
+
+      products.forEach((p, i) => {
+        const tag = categories[i % categories.length];
+        const card = document.createElement('div');
+        card.className = 'product-card';
+        card.style.transitionDelay = `${Math.min(i * 0.06, 0.7)}s`;
+
+        card.innerHTML = `
+      <div class="product-img-wrap">
+        ${p.imgSrc
+            ? `<img class="product-img" src="${p.imgSrc}" alt="${escHtml(p.name)}" loading="lazy" />`
+            : `<div class="product-img-placeholder">
+               <svg width="40" height="40" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.2">
+                 <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                 <circle cx="8.5" cy="8.5" r="1.5"/>
+                 <polyline points="21 15 16 10 5 21"/>
+               </svg>
+               <span>No image</span>
+             </div>`
+          }
+      </div>
+      <div class="product-body">
+        <span class="product-tag">${tag}</span>
+        <div class="product-name">${escHtml(p.name || 'Unnamed Product')}</div>
+      </div>
+    `;
+
+        grid.appendChild(card);
+        // Observe for scroll animation
+        requestAnimationFrame(() => cardObs.observe(card));
+      });
+
+      // Update section header count
+      document.querySelector('.section-desc').textContent =
+        `Showing ${products.length} product${products.length !== 1 ? 's' : ''} — call or visit to order.`;
+    }
+
+    /* ─── UI helpers ─────────────────────────────────────────────────── */
+    function setLoading(on, msg = '') {
+      const ls = document.getElementById('loadingState');
+      const lt = document.getElementById('loadingText');
+      ls.classList.toggle('active', on);
+      if (msg) lt.textContent = msg;
+      if (on) {
+        document.getElementById('emptyState').classList.remove('active');
+      }
+    }
+
+    function showEmpty(msg) {
+      setLoading(false);
+      const el = document.getElementById('emptyState');
+      el.classList.add('active');
+      if (msg) el.querySelector('p:last-child').textContent = msg;
+    }
+
+    function escHtml(str) {
+      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+  </script>
+</body>
+
+</html>
