@@ -1171,10 +1171,7 @@
       const grid = document.getElementById('productGrid');
       grid.innerHTML = '';
 
-      const categories = ['Pantry', 'Fresh', 'Spice', 'Staple', 'Specialty', 'Organic'];
-
       products.forEach((p, i) => {
-        const tag = categories[i % categories.length];
         const card = document.createElement('div');
         card.className = 'product-card';
         card.style.transitionDelay = `${Math.min(i * 0.06, 0.7)}s`;
@@ -1194,8 +1191,7 @@
           }
       </div>
       <div class="product-body">
-        <span class="product-tag">${tag}</span>
-        <div class="product-name">${escHtml(p.name || 'Unnamed Product!')}</div>
+        <div class="product-name">${escHtml(p.name || 'Unnamed Product')}</div>
       </div>
     `;
 
